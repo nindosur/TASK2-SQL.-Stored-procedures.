@@ -1,0 +1,116 @@
+--1
+CREATE PROCEDURE ShowAllDisks
+AS
+BEGIN
+    SELECT * FROM Disk
+END
+____________________________________
+EXEC ShowAllDisks
+
+--2
+CREATE PROCEDURE ShowDisksByPublisher
+    @publisherName nvarchar(20)
+AS
+BEGIN
+    SELECT * FROM Disk
+    WHERE PublisherId = (SELECT id FROM Publishers WHERE Name = @publisherName)
+END
+____________________________________
+EXEC ShowDisksByPublisher @publisherName = 'Джексон'
+
+--3, 4
+CREATE PROCEDURE ShowMostPopularStyle
+AS
+BEGIN
+    SELECT TOP 1 s.Name
+    FROM Styles s
+    JOIN Disk d ON s.id = d.Style
+    GROUP BY s.Name
+    ORDER BY COUNT(*) DESC
+END
+__________________________________
+EXEC ShowMostPopularStyle
+
+--5
+CREATE PROCEDURE ShowMaxSongsDiskByStyle
+    @style nvarchar(20)
+AS
+BEGIN
+    IF @style = 'all'
+    BEGIN
+        SELECT TOP 1 *
+        FROM Disk
+        ORDER BY (SELECT COUNT(*) FROM Songs WHERE NameDiskId = Disk.id) DESC
+    END
+    ELSE
+    BEGIN
+        SELECT TOP 1 *
+        FROM Disk
+        WHERE Style = (SELECT id FROM Styles WHERE Name = @style)
+        ORDER BY (SELECT COUNT(*) FROM Songs WHERE NameDiskId = Disk.id) DESC
+    END
+END
+____________________________________
+EXEC ShowMaxSongsDiskByStyle @style = 'Попса'
+END
+GO
+EXEC ShowMaxSongsDiskByStyle @style = 'all'
+
+--6
+CREATE PROCEDURE DeleteDisksByStyle
+    @style nvarchar(20)
+AS
+BEGIN
+    DECLARE @deletedCount int = 0
+    DECLARE @styleId int = (SELECT id FROM Styles WHERE Name = @style)
+    
+    WHILE EXISTS (SELECT * FROM Disk WHERE Style = @styleId)
+    BEGIN
+        DELETE TOP (1)
+        FROM Disk
+        WHERE Style = @styleId
+        SET @deletedCount += 1
+    END
+    
+    SELECT @deletedCount
+END
+____________________________________
+EXEC DeleteDisksByStyle @style = 'Рок'
+
+--7
+CREATE PROCEDURE ShowOldestAndNewestDisks
+AS
+BEGIN
+    SELECT TOP 1 'Старый альбом' as [Age], *
+    FROM Disk
+    ORDER BY Date ASC
+    
+    UNION ALL
+    
+    SELECT TOP 1 'Молодой альбом' as [Age], *
+    FROM Disk
+    ORDER BY Date DESC
+END
+____________________________________
+EXEC ShowOldestAndNewestDisks
+
+
+--8
+CREATE PROCEDURE DeleteDisksByName
+    @name nvarchar(20)
+AS
+BEGIN
+    DECLARE @deletedCount int = 0
+
+    WHILE EXISTS (SELECT * FROM Disk WHERE Name LIKE '%' + @name + '%')
+    BEGIN
+        DELETE TOP (1)
+        FROM Disk
+        WHERE Name LIKE '%' + @name + '%'
+        SET @deletedCount += 1
+    END
+    
+    SELECT @deletedCount
+END
+____________________________________
+EXEC DeleteDisksByName @name = 'Рэп'

@@ -1,0 +1,84 @@
+--1
+CREATE PROCEDURE ShowAllProducts
+AS
+BEGIN
+   SELECT * FROM Products;
+END
+____________________________________________
+EXEC ShowAllProducts
+
+--2
+CREATE PROCEDURE ShowProductsByType (@Type VARCHAR(50))
+AS
+BEGIN
+   SELECT * FROM Products WHERE Type = @Type AND Quantity > 0;
+END
+____________________________________________
+DECLARE @Type VARCHAR(50);
+SET @Type = 'обувь';
+EXEC ShowProductsByType @Type;
+
+--3
+CREATE PROCEDURE ShowOldestCustomers
+AS
+BEGIN
+   SELECT TOP 3 * FROM Customers ORDER BY HireDate;
+END
+____________________________________________
+EXEC ShowOldestCustomers
+
+--4
+CREATE PROCEDURE ShowMostSuccessfulSeller
+AS
+BEGIN
+   SELECT TOP 1 e.EmployeeID, e.FirstName, e.LastName, SUM(s.Quantity * s.SalePrice) as TotalSales
+   FROM Employees e INNER JOIN Sales s ON e.EmployeeID = s.SellerID
+   GROUP BY e.EmployeeID, e.FirstName, e.LastName
+   ORDER BY TotalSales DESC;
+END
+____________________________________________
+EXEC ShowMostSuccessfulSeller
+
+--5
+CREATE PROCEDURE CheckManufacturerAvailability (@Manufacturer VARCHAR(100), @Result VARCHAR(3) OUTPUT)
+AS
+BEGIN
+   IF EXISTS (SELECT * FROM Products WHERE Manufacturer = @Manufacturer AND Quantity > 0)
+      SET @Result = 'yes';
+   ELSE
+      SET @Result = 'no';
+END
+____________________________________________
+DECLARE @Result VARCHAR(3);
+EXEC CheckManufacturerAvailability 'Adidas', @Result OUTPUT;
+SELECT @Result AS 'Availability';
+
+--6
+CREATE PROCEDURE ShowMostPopularManufacturer
+AS
+BEGIN
+   SELECT TOP 1 p.Manufacturer, SUM(s.Quantity * s.SalePrice) as TotalSales
+   FROM Products p INNER JOIN Sales s ON p.ProductID = s.ProductID
+   GROUP BY p.Manufacturer
+   ORDER BY TotalSales DESC;
+END
+____________________________________________
+EXEC ShowMostPopularManufacturer
+
+--7
+CREATE PROCEDURE DeleteCustomersByDate (@HireDate DATE, @DeletedCount INT OUTPUT)
+AS
+BEGIN
+   DECLARE @TempCount INT;
+   SELECT @TempCount = COUNT(*) FROM Customers WHERE HireDate > @HireDate;
+
+   DELETE FROM Customers WHERE HireDate > @HireDate;
+   SET @DeletedCount = @@ROWCOUNT;
+
+   IF @DeletedCount <> @TempCount
+      RAISERROR('An error occurred while deleting customers', 16, 1);    
+END
+____________________________________________
+DECLARE @DeletedCount INT;
+EXEC DeleteCustomersByDate '2020-01-01', @DeletedCount OUTPUT;
+SELECT @DeletedCount AS 'Deleted Count';
